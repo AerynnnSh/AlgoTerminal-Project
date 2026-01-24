@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 📈 AlgoTerminal | Built with ❤️ by AerynnnSh :3
 
-## Getting Started
+> A real-time crypto market analytics dashboard built with Next.js 14, TypeScript, and Recharts.
 
-First, run the development server:
+![Project Banner](/public/opengraph-image.png) 
+*(Note: Ganti path ini dengan screenshot aplikasimu nanti)*
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🔗 Live Demo
+🚀 **[View Live Demo](https://algoterminal.vercel.app)**
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## ✨ Key Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 📊 Advanced Technical Charting
+- **Interactive Area Charts:** Visualize price action with gradient fills using `Recharts`.
+- **Technical Indicators:** Toggleable **SMA-14** (Simple Moving Average) and **EMA-50** (Exponential Moving Average) calculated in real-time using custom algorithms.
+- **Dynamic Tooltips:** Hover over charts to see precise price and indicator values.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 🛠 Tools & Utilities
+- **Scenario Simulator:** A built-in Profit Calculator to simulate investment returns based on future price targets.
+- **Real-Time Search:** Instant filtering of assets by Name or Symbol without API refetching.
+- **Watchlist System:** Save favorite coins locally (LocalStorage persistence).
 
-## Learn More
+### ⚡ Performance & UX
+- **Server-Side Rendering (SSR):** Optimized initial load with Next.js App Router.
+- **Loading Skeletons:** Zero layout shifts during data fetching.
+- **Responsive Design:** Fully optimized for Desktop, Tablet, and Mobile.
+- **Dark/Light Mode:** Theme-aware UI components.
 
-To learn more about Next.js, take a look at the following resources:
+## 🏗 Tech Stack
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Framework:** Next.js 14 (App Router)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS
+- **Visualization:** Recharts
+- **Data Source:** CoinGecko Public API
+- **Icons:** Lucide React
+- **Date Handling:** date-fns
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🚀 Getting Started
 
-## Deploy on Vercel
+1. **Clone the repository**
+   ```bash
+   git clone [https://github.com/username/algoterminal.git](https://github.com/username/algoterminal.git)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. **Install dependencies**
+   ```bash
+   npm install
+   # or
+   yarn install
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. **Run the development server**
+   ```bash
+   npm run dev
+
+4. **Open your browser** Navigate to http://localhost:3000
+
+## 🧠 Algo Logic Highlight
+One of the challenges in this project was calculating technical indicators on the client side. Here is a snippet of the EMA (Exponential Moving Average) calculation logic used in the chart:
+  ```bash
+  // Algorithm to calculate EMA-50
+  const k = 2 / (emaPeriod + 1);
+  let previousEma = 0;
+  
+  return rawData.map((item, index) => {
+    if (index === 0) {
+      previousEma = item.price;
+      return { ...item, ema: item.price };
+    }
+    const ema = item.price * k + previousEma * (1 - k);
+    previousEma = ema;
+    return { ...item, ema };
+  });
