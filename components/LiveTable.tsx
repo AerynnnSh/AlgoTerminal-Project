@@ -2,6 +2,7 @@
 "use client"; // Wajib untuk fitur interaktif/realtime
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation"; // Import useRouter untuk navigasi
 import { CoinData } from "@/types/coin";
 import Sparkline from "./Sparkline"; // Import komponen grafik
 
@@ -12,6 +13,7 @@ interface LiveTableProps {
 export default function LiveTable({ initialData }: LiveTableProps) {
   const [coins, setCoins] = useState<CoinData[]>(initialData);
   const [isUpdating, setIsUpdating] = useState(false);
+  const router = useRouter(); // Inisialisasi router
 
   useEffect(() => {
     // Fungsi untuk ambil data terbaru
@@ -72,7 +74,8 @@ export default function LiveTable({ initialData }: LiveTableProps) {
             {coins.map((coin) => (
               <tr
                 key={coin.id}
-                className="hover:bg-slate-800/50 transition-colors group"
+                onClick={() => router.push(`/coin/${coin.id}`)} // Aksi Navigasi
+                className="hover:bg-slate-800/50 transition-colors group cursor-pointer" // cursor-pointer agar terlihat bisa diklik
               >
                 {/* 1. Asset Name */}
                 <td className="p-4 flex items-center gap-3">
