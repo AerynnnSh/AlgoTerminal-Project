@@ -1,9 +1,8 @@
-// src/app/coin/[id]/page.tsx
-
-import { getCoinDetail, getCoinHistory } from "@/lib/api"; // Tambah getCoinHistory
+import { getCoinDetail, getCoinHistory } from "@/lib/api";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import CoinChart from "@/components/CoinChart"; // Import komponen Chart
+import CoinChart from "@/components/CoinChart";
+import BackButton from "@/components/BackButton"; // <--- IMPORT INI
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -12,137 +11,145 @@ interface PageProps {
 export default async function CoinPage({ params }: PageProps) {
   const { id } = await params;
 
-  // Fetch Data secara Parallel (Biar ngebut)
+  // Fetch Data Parallel
   const coinData = getCoinDetail(id);
   const historyData = getCoinHistory(id);
 
-  // Tunggu keduanya selesai
   const [coin, history] = await Promise.all([coinData, historyData]);
 
-  // --- TAMPILAN ERROR ---
+  // --- TAMPILAN ERROR / LOADING ---
   if (!coin) {
     return (
-      <main className="min-h-screen bg-slate-950 text-white p-12 flex flex-col items-center justify-center text-center font-sans">
+      <main className="min-h-screen pt-24 pb-12 px-6 flex flex-col items-center justify-center text-center">
         <div className="text-6xl mb-4 animate-pulse">⏳</div>
-        <h1 className="text-2xl font-bold font-mono text-rose-500 mb-2">
-          Data Tidak Ditemukan / API Limit
+        <h1 className="text-2xl font-bold font-mono text-primary mb-2">
+          Syncing Data...
         </h1>
-        <p className="text-slate-400 max-w-md">
-          Silakan tunggu <strong>1 menit</strong> lalu refresh halaman ini.
+        <p className="text-muted-foreground max-w-md">
+          Data sedang diambil atau API limit tercapai. Silakan tunggu sebentar
+          lalu refresh.
         </p>
         <Link
           href="/"
-          className="mt-8 px-6 py-2 bg-slate-800 rounded hover:bg-slate-700 transition-colors flex items-center gap-2"
+          className="mt-8 px-6 py-2 bg-card border border-border rounded hover:bg-muted transition-colors flex items-center gap-2 text-foreground"
         >
-          <ArrowLeft size={16} /> Kembali ke Dashboard
+          <ArrowLeft size={16} /> Dashboard
         </Link>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white p-6 md:p-12 font-sans selection:bg-emerald-500/30">
-      <div className="max-w-5xl mx-auto">
-        {/* Tombol Kembali */}
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-8 transition-colors group"
-        >
-          <ArrowLeft
-            size={20}
-            className="group-hover:-translate-x-1 transition-transform"
-          />
-          Back to Dashboard
-        </Link>
+    <main className="min-h-screen pt-24 pb-12 px-4 md:px-8 font-sans max-w-7xl mx-auto">
+      {/* --- GANTI LINK LAMA DENGAN COMPONENT BACKBUTTON --- */}
+      <BackButton />
 
-        {/* Header Detail */}
-        <div className="flex flex-col md:flex-row gap-6 items-start md:items-center mb-6">
+      {/* Header Info Koin (DYNAMIC THEME) */}
+      <div className="flex flex-col md:flex-row gap-6 items-start md:items-center mb-8 pb-8 border-b border-border">
+        {/* Icon Container */}
+        <div className="p-4 bg-card rounded-2xl border border-border shadow-sm">
           <img
             src={coin.image.large}
             alt={coin.name}
-            className="w-16 h-16 md:w-20 md:h-20"
+            className="w-12 h-12 md:w-16 md:h-16"
           />
-          <div>
-            <h1 className="text-4xl font-bold font-mono text-white tracking-tighter">
-              {coin.name}
-            </h1>
-            <div className="flex items-center gap-3 mt-2">
-              <span className="bg-slate-800 text-slate-300 px-3 py-1 rounded text-sm font-mono uppercase tracking-wide">
-                {coin.symbol}
-              </span>
-              <span className="bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded text-sm font-mono border border-emerald-500/20">
-                Rank #{coin.market_cap_rank}
-              </span>
-            </div>
-          </div>
+        </div>
 
-          <div className="md:ml-auto text-left md:text-right">
-            <div className="text-sm text-slate-400 font-mono mb-1">
-              Current Price
-            </div>
-            <div className="text-3xl md:text-5xl font-bold font-mono tracking-tighter text-white">
-              ${coin.market_data.current_price.usd.toLocaleString()}
-            </div>
-            <div
-              className={`text-lg font-bold mt-1 ${coin.market_data.price_change_percentage_24h >= 0 ? "text-emerald-400" : "text-rose-500"}`}
-            >
-              {coin.market_data.price_change_percentage_24h.toFixed(2)}% (24h)
-            </div>
+        <div>
+          {/* Nama Koin */}
+          <h1 className="text-4xl md:text-5xl font-black font-sans text-foreground tracking-tight">
+            {coin.name}
+          </h1>
+          <div className="flex items-center gap-3 mt-2">
+            {/* Symbol */}
+            <span className="bg-muted text-muted-foreground px-3 py-1 rounded text-sm font-mono uppercase tracking-wide border border-border">
+              {coin.symbol}
+            </span>
+            {/* Rank */}
+            <span className="bg-primary/10 text-primary px-3 py-1 rounded text-sm font-mono border border-primary/20">
+              Rank #{coin.market_cap_rank}
+            </span>
           </div>
         </div>
 
-        {/* --- AREA GRAFIK BESAR (NEW) --- */}
-        <div className="mb-10">
-          {history ? (
-            <CoinChart history={history} />
-          ) : (
-            <div className="h-[300px] w-full border border-slate-800 rounded-xl bg-slate-900/30 flex items-center justify-center text-slate-500 font-mono">
-              Grafik tidak tersedia (API Limit)
-            </div>
-          )}
-        </div>
-
-        {/* Grid Statistik */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-          <div className="p-6 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-900 transition-colors">
-            <div className="text-slate-500 text-xs uppercase font-mono mb-2">
-              Market Cap
-            </div>
-            <div className="text-xl font-bold text-white tracking-tight">
-              ${coin.market_data.market_cap.usd.toLocaleString()}
-            </div>
+        <div className="md:ml-auto text-left md:text-right">
+          <div className="text-xs text-muted-foreground font-mono uppercase tracking-widest mb-1">
+            Current Price
           </div>
-          <div className="p-6 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-900 transition-colors">
-            <div className="text-slate-500 text-xs uppercase font-mono mb-2">
-              Total Volume (24h)
-            </div>
-            <div className="text-xl font-bold text-white tracking-tight">
-              ${coin.market_data.total_volume.usd.toLocaleString()}
-            </div>
+          {/* Harga */}
+          <div className="text-3xl md:text-5xl font-bold font-mono tracking-tighter text-foreground">
+            ${coin.market_data.current_price.usd.toLocaleString("en-US")}
           </div>
-          <div className="p-6 rounded-xl border border-slate-800 bg-slate-900/50 hover:bg-slate-900 transition-colors">
-            <div className="text-slate-500 text-xs uppercase font-mono mb-2">
-              Circulating Supply
-            </div>
-            <div className="text-xl font-bold text-emerald-400 tracking-tight">
-              {coin.market_data.circulating_supply.toLocaleString()}{" "}
-              {coin.symbol.toUpperCase()}
-            </div>
-          </div>
-        </div>
-
-        {/* Deskripsi */}
-        <div className="p-6 md:p-8 rounded-xl border border-slate-800 bg-slate-900/30">
-          <h3 className="text-white font-mono text-xl mb-6 border-l-4 border-emerald-500 pl-4">
-            /// ASSET DESCRIPTION
-          </h3>
+          {/* Persentase */}
           <div
-            className="prose prose-invert prose-slate max-w-none text-slate-400 leading-relaxed"
-            dangerouslySetInnerHTML={{
-              __html: coin.description.en || "No description available.",
-            }}
-          />
+            className={`text-lg font-bold mt-1 ${coin.market_data.price_change_percentage_24h >= 0 ? "text-emerald-500" : "text-rose-500"}`}
+          >
+            {coin.market_data.price_change_percentage_24h.toFixed(2)}% (24h)
+          </div>
         </div>
+      </div>
+
+      {/* --- CHART AREA (DYNAMIC BACKGROUND) --- */}
+      <div className="mb-8 w-full h-[400px] p-4 rounded-xl border border-border bg-card shadow-sm">
+        {history ? (
+          <CoinChart history={history} />
+        ) : (
+          <div className="h-full w-full flex items-center justify-center text-muted-foreground font-mono">
+            Chart Data Unavailable (API Limit)
+          </div>
+        )}
+      </div>
+
+      {/* Grid Statistik (DYNAMIC CARDS) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Card 1 */}
+        <div className="p-6 rounded-xl border border-border bg-card hover:border-primary/50 transition-colors shadow-sm">
+          <div className="text-muted-foreground text-xs uppercase font-mono mb-2 tracking-widest">
+            Market Cap
+          </div>
+          <div className="text-2xl font-bold text-foreground tracking-tight font-mono">
+            ${coin.market_data.market_cap.usd.toLocaleString("en-US")}
+          </div>
+        </div>
+
+        {/* Card 2 */}
+        <div className="p-6 rounded-xl border border-border bg-card hover:border-primary/50 transition-colors shadow-sm">
+          <div className="text-muted-foreground text-xs uppercase font-mono mb-2 tracking-widest">
+            Total Volume (24h)
+          </div>
+          <div className="text-2xl font-bold text-foreground tracking-tight font-mono">
+            ${coin.market_data.total_volume.usd.toLocaleString("en-US")}
+          </div>
+        </div>
+
+        {/* Card 3 */}
+        <div className="p-6 rounded-xl border border-border bg-card hover:border-primary/50 transition-colors shadow-sm">
+          <div className="text-muted-foreground text-xs uppercase font-mono mb-2 tracking-widest">
+            Circulating Supply
+          </div>
+          <div className="text-2xl font-bold text-primary tracking-tight font-mono">
+            {coin.market_data.circulating_supply.toLocaleString("en-US")}{" "}
+            <span className="text-sm text-muted-foreground">
+              {coin.symbol.toUpperCase()}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Deskripsi (DYNAMIC PROSE) */}
+      <div className="p-6 md:p-8 rounded-xl border border-border bg-card shadow-sm">
+        <h3 className="text-foreground font-mono text-xl mb-6 flex items-center gap-3">
+          <span className="w-1 h-6 bg-primary rounded-full shadow-[0_0_10px_var(--primary)]"></span>
+          /// ASSET PROTOCOL
+        </h3>
+        <div
+          className="prose prose-zinc dark:prose-invert max-w-none leading-relaxed font-sans text-sm md:text-base"
+          dangerouslySetInnerHTML={{
+            __html:
+              coin.description.en ||
+              "No description data available in database.",
+          }}
+        />
       </div>
     </main>
   );
