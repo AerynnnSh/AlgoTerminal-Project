@@ -43,3 +43,24 @@ export async function getCoinDetail(id: string) {
     return null;
   }
 }
+
+export interface ChartData {
+  prices: [number, number][]; // Array [timestamp, price]
+}
+
+export async function getCoinHistory(id: string): Promise<ChartData | null> {
+  try {
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=7&interval=daily`,
+      { next: { revalidate: 60 } },
+    );
+
+    if (res.status === 429) return null; // Kena limit
+    if (!res.ok) throw new Error("Gagal fetch history");
+
+    return res.json();
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}

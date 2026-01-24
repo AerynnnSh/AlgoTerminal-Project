@@ -1,19 +1,25 @@
-import { getCoinDetail } from "@/lib/api";
+// src/app/coin/[id]/page.tsx
+
+import { getCoinDetail, getCoinHistory } from "@/lib/api"; // Tambah getCoinHistory
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import CoinChart from "@/components/CoinChart"; // Import komponen Chart
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 export default async function CoinPage({ params }: PageProps) {
-  // 1. Ambil ID dari URL
   const { id } = await params;
 
-  // 2. Ambil data detail koin tersebut
-  const coin = await getCoinDetail(id);
+  // Fetch Data secara Parallel (Biar ngebut)
+  const coinData = getCoinDetail(id);
+  const historyData = getCoinHistory(id);
 
-  // --- TAMPILAN JIKA ERROR / KENA LIMIT ---
+  // Tunggu keduanya selesai
+  const [coin, history] = await Promise.all([coinData, historyData]);
+
+  // --- TAMPILAN ERROR ---
   if (!coin) {
     return (
       <main className="min-h-screen bg-slate-950 text-white p-12 flex flex-col items-center justify-center text-center font-sans">
@@ -22,8 +28,7 @@ export default async function CoinPage({ params }: PageProps) {
           Data Tidak Ditemukan / API Limit
         </h1>
         <p className="text-slate-400 max-w-md">
-          Maaf, API CoinGecko gratis membatasi jumlah request. Silakan tunggu{" "}
-          <strong>1 menit</strong> lalu refresh halaman ini.
+          Silakan tunggu <strong>1 menit</strong> lalu refresh halaman ini.
         </p>
         <Link
           href="/"
@@ -35,7 +40,6 @@ export default async function CoinPage({ params }: PageProps) {
     );
   }
 
-  // --- TAMPILAN UTAMA (JIKA SUKSES) ---
   return (
     <main className="min-h-screen bg-slate-950 text-white p-6 md:p-12 font-sans selection:bg-emerald-500/30">
       <div className="max-w-5xl mx-auto">
@@ -52,7 +56,7 @@ export default async function CoinPage({ params }: PageProps) {
         </Link>
 
         {/* Header Detail */}
-        <div className="flex flex-col md:flex-row gap-6 items-start md:items-center mb-10 border-b border-slate-800 pb-10">
+        <div className="flex flex-col md:flex-row gap-6 items-start md:items-center mb-6">
           <img
             src={coin.image.large}
             alt={coin.name}
@@ -85,6 +89,17 @@ export default async function CoinPage({ params }: PageProps) {
               {coin.market_data.price_change_percentage_24h.toFixed(2)}% (24h)
             </div>
           </div>
+        </div>
+
+        {/* --- AREA GRAFIK BESAR (NEW) --- */}
+        <div className="mb-10">
+          {history ? (
+            <CoinChart history={history} />
+          ) : (
+            <div className="h-[300px] w-full border border-slate-800 rounded-xl bg-slate-900/30 flex items-center justify-center text-slate-500 font-mono">
+              Grafik tidak tersedia (API Limit)
+            </div>
+          )}
         </div>
 
         {/* Grid Statistik */}
