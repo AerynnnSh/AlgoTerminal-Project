@@ -2,8 +2,7 @@
 
 > A real-time crypto market analytics dashboard built with Next.js 14, TypeScript, and Recharts.
 
-![Project Banner](/public/opengraph-image.png) 
-*(Note: Ganti path ini dengan screenshot aplikasimu nanti)*
+![Project Banner](img/banner.png) 
 
 ## 🔗 Live Demo
 🚀 **[View Live Demo](https://algoterminal.vercel.app)**
