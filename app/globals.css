@@ -1,80 +1,69 @@
 @import "tailwindcss";
 
-/* 1. Daftarkan variabel tema di sini agar dikenali oleh Tailwind v4 */
 @theme {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --font-mono: "Geist Mono", monospace;
 }
 
-/* 2. Definisi nilai variabel aslinya (Dark Mode Permanen) */
 @layer base {
   :root {
-    /* Format HSL: Hue Saturation Lightness */
-    --background: 222.2 84% 4.9%; /* Slate-950 */
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-
-    --radius: 0.5rem;
+    /* TEMA LIGHT */
+    --background: #ffffff;
+    --foreground: #09090b;
+    --card: #f4f4f5;
+    --card-foreground: #18181b;
+    --border: #e4e4e7;
+    --primary: #10b981;
   }
 
-  /* 3. Terapkan style global */
-  * {
-    @apply border-border; /* Sekarang ini aman karena 'border' sudah ada di @theme */
+  .dark {
+    /* TEMA DARK */
+    --background: #050505;
+    --foreground: #fafafa;
+    --card: #0a0a0a;
+    --card-foreground: #fafafa;
+    --border: #27272a;
+    --primary: #10b981;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased transition-colors duration-300;
+
+    /* Grid Pattern */
+    background-image:
+      linear-gradient(to right, var(--border) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+    background-size: 50px 50px;
+
+    background-attachment: fixed;
   }
+}
+
+/* --- REVISI: FADE TRANSITION OVERLAY --- */
+.fade-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+
+  z-index: 9999;
+
+  /* LOGIKA FADE (Opacity) */
+  opacity: 0; /* Awalnya tidak terlihat */
+  pointer-events: none; /* Tembus pandang/klik saat tidak aktif */
+
+  /* Durasi transisi 0.5 detik */
+  transition: opacity 0.5s ease-in-out;
+}
+
+/* SAAT AKTIF: Muncul penuh */
+.fade-overlay.active {
+  opacity: 1;
+  pointer-events: all; /* Blokir layar biar user gak klik apa-apa */
 }

@@ -1,11 +1,11 @@
 import { CoinData } from "@/types/coin";
 
-// --- Ambil 20 Koin Teratas ---
+// --- Ambil 100 Koin Teratas (FIX: Ubah dari 20 ke 100) ---
 export async function getTopCoins(): Promise<CoinData[]> {
   try {
     const res = await fetch(
-      "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&sparkline=true&price_change_percentage=24h",
-      { next: { revalidate: 60 } },
+      "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=true&price_change_percentage=24h",
+      { next: { revalidate: 60 } }, // Cache 60 detik agar hemat API limit
     );
 
     if (!res.ok) {
@@ -14,7 +14,7 @@ export async function getTopCoins(): Promise<CoinData[]> {
 
     return res.json();
   } catch (error) {
-    console.error(error);
+    console.error("API Error (Top Coins):", error);
     return [];
   }
 }
@@ -23,7 +23,8 @@ export async function getTopCoins(): Promise<CoinData[]> {
 export async function getCoinDetail(id: string) {
   try {
     const res = await fetch(
-      `https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=true`,
+      // Pastikan market_data=true agar halaman detail tidak error
+      `https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=true`,
       { next: { revalidate: 60 } },
     );
 
@@ -48,10 +49,11 @@ export interface ChartData {
   prices: [number, number][]; // Array [timestamp, price]
 }
 
+// --- Ambil History Chart ---
 export async function getCoinHistory(id: string): Promise<ChartData | null> {
   try {
     const res = await fetch(
-      `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=7&interval=daily`,
+      `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=7`,
       { next: { revalidate: 60 } },
     );
 
@@ -60,7 +62,7 @@ export async function getCoinHistory(id: string): Promise<ChartData | null> {
 
     return res.json();
   } catch (error) {
-    console.error(error);
+    console.error("API Error (History):", error);
     return null;
   }
 }
