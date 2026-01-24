@@ -12,7 +12,8 @@ import {
   ChevronRight,
   AlertTriangle,
   RefreshCcw,
-} from "lucide-react"; // Icon baru
+  Search, // <--- 1. IMPORT ICON SEARCH
+} from "lucide-react";
 import { useWatchlist } from "@/store/useWatchlist";
 
 interface LiveTableProps {
@@ -30,14 +31,16 @@ export default function LiveTable({ initialData }: LiveTableProps) {
   // State Data
   const [coins, setCoins] = useState<CoinData[]>(initialData);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null); // State untuk Error
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // State Sorting & Filtering
+  // State Sorting, Filtering & SEARCH
   const [sortConfig, setSortConfig] = useState<{
     key: SortKey;
     direction: "asc" | "desc";
   }>({ key: "market_cap_rank", direction: "asc" });
+
   const [showFavOnly, setShowFavOnly] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(""); // <--- 2. STATE SEARCH BARU
 
   // State Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -50,17 +53,15 @@ export default function LiveTable({ initialData }: LiveTableProps) {
   useEffect(() => {
     const fetchData = async () => {
       setIsUpdating(true);
-      setErrorMsg(null); // Reset error sebelum fetch
+      setErrorMsg(null);
 
       try {
         const res = await fetch(
           "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=true&price_change_percentage=24h",
         );
 
-        // DETEKSI API LIMIT (429)
         if (res.status === 429) {
           console.warn("API Rate Limit Reached");
-          // Jangan setCoins([]) jika sebelumnya sudah ada data, biar user tetap bisa liat data lama
           if (coins.length === 0) {
             setErrorMsg("API RATE LIMIT REACHED. PLEASE WAIT 1 MINUTE.");
           }
@@ -81,13 +82,10 @@ export default function LiveTable({ initialData }: LiveTableProps) {
       }
     };
 
-    // Panggil fetch pertama kali
     fetchData();
-
-    // Interval update
     const interval = setInterval(fetchData, 15000);
     return () => clearInterval(interval);
-  }, []); // Hapus coins dari dependency agar tidak infinite loop
+  }, []);
 
   const handleStarClick = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -102,9 +100,20 @@ export default function LiveTable({ initialData }: LiveTableProps) {
     setSortConfig({ key, direction });
   };
 
-  // 2. LOGIC PENGOLAHAN DATA
+  // 2. LOGIC PENGOLAHAN DATA (SEARCH + FILTER + SORT)
   const processedCoins = [...coins]
-    .filter((coin) => (showFavOnly ? savedIds.includes(coin.id) : true))
+    .filter((coin) => {
+      // Logic 1: Filter Favorites
+      const matchesFav = showFavOnly ? savedIds.includes(coin.id) : true;
+
+      // Logic 2: Filter Search (Name OR Symbol)
+      const query = searchQuery.toLowerCase();
+      const matchesSearch =
+        coin.name.toLowerCase().includes(query) ||
+        coin.symbol.toLowerCase().includes(query);
+
+      return matchesFav && matchesSearch;
+    })
     .sort((a, b) => {
       // @ts-ignore
       const valA = a[sortConfig.key] ?? 0;
@@ -124,16 +133,17 @@ export default function LiveTable({ initialData }: LiveTableProps) {
     currentPage * ITEMS_PER_PAGE,
   );
 
+  // Reset page ke 1 jika user melakukan filter/search/sort
   useEffect(() => {
     setCurrentPage(1);
-  }, [showFavOnly, sortConfig]);
+  }, [showFavOnly, sortConfig, searchQuery]); // <--- Tambahkan searchQuery
 
   return (
     <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm transition-colors duration-300 flex flex-col">
-      {/* Header Control */}
+      {/* --- HEADER CONTROL --- */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between px-6 py-4 border-b border-border gap-4 bg-muted/20">
+        {/* KIRI: Indikator & Title */}
         <div className="flex items-center gap-2">
-          {/* Indikator Status: Hijau (Ok), Merah (Error), Kuning (Loading) */}
           <div
             className={`w-2 h-2 rounded-full ${
               errorMsg
@@ -145,23 +155,37 @@ export default function LiveTable({ initialData }: LiveTableProps) {
           ></div>
 
           <span className="text-xs font-mono font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-            {errorMsg
-              ? "SYSTEM ALERT"
-              : `LIVE DATA (${processedCoins.length} ASSETS)`}
+            {errorMsg ? "SYSTEM ALERT" : `LIVE DATA (${processedCoins.length})`}
           </span>
         </div>
 
-        <button
-          onClick={() => setShowFavOnly(!showFavOnly)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-mono border transition-all ${
-            showFavOnly
-              ? "bg-primary/10 border-primary text-primary"
-              : "bg-background border-border text-zinc-500 hover:border-zinc-400 dark:hover:border-zinc-600"
-          }`}
-        >
-          <Filter size={14} />
-          {showFavOnly ? "Showing Favorites" : "Show All"}
-        </button>
+        {/* KANAN: Search & Filter */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full md:w-auto">
+          {/* 3. INPUT SEARCH BARU */}
+          <div className="relative group w-full md:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors h-4 w-4" />
+            <input
+              type="text"
+              placeholder="SEARCH (e.g. HYPE)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-background border border-border rounded-lg pl-9 pr-4 py-2 text-xs font-mono focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all uppercase placeholder:normal-case"
+            />
+          </div>
+
+          {/* Tombol Filter Favorites */}
+          <button
+            onClick={() => setShowFavOnly(!showFavOnly)}
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-mono border transition-all whitespace-nowrap ${
+              showFavOnly
+                ? "bg-primary/10 border-primary text-primary"
+                : "bg-background border-border text-zinc-500 hover:border-zinc-400 dark:hover:border-zinc-600"
+            }`}
+          >
+            <Filter size={14} />
+            {showFavOnly ? "Show All" : "Show Favorites"}
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto min-h-[500px]">
@@ -311,13 +335,14 @@ export default function LiveTable({ initialData }: LiveTableProps) {
                 );
               })
             ) : (
-              // --- BAGIAN INI MENANGANI LOADING / ERROR ---
+              // --- 4. HANDLING EMPTY STATE (LOADING / ERROR / EMPTY SEARCH) ---
               <tr>
                 <td
                   colSpan={7}
                   className="text-center py-32 text-muted-foreground font-mono"
                 >
                   {errorMsg ? (
+                    // TAMPILAN ERROR
                     <div className="flex flex-col items-center justify-center gap-3 animate-in fade-in zoom-in duration-300">
                       <div className="p-3 bg-rose-500/10 rounded-full border border-rose-500/20">
                         <AlertTriangle size={32} className="text-rose-500" />
@@ -327,7 +352,7 @@ export default function LiveTable({ initialData }: LiveTableProps) {
                       </div>
                       <p className="text-xs text-zinc-500 max-w-sm mx-auto">
                         Server data provider sedang sibuk (Rate Limit). Data
-                        akan otomatis dimuat ulang dalam beberapa saat.
+                        akan otomatis dimuat ulang.
                       </p>
                       <button
                         onClick={() => window.location.reload()}
@@ -336,16 +361,31 @@ export default function LiveTable({ initialData }: LiveTableProps) {
                         <RefreshCcw size={12} /> Force Reload
                       </button>
                     </div>
+                  ) : searchQuery ? (
+                    // TAMPILAN SEARCH NOT FOUND (BARU)
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-4 bg-muted/50 rounded-full">
+                        <Search size={24} className="opacity-40" />
+                      </div>
+                      <div className="font-bold">
+                        NO RESULTS FOR "{searchQuery}"
+                      </div>
+                      <div className="text-xs opacity-50">
+                        Check spelling or try symbol (e.g. BTC)
+                      </div>
+                    </div>
                   ) : showFavOnly ? (
+                    // TAMPILAN WATCHLIST KOSONG
                     <div className="flex flex-col items-center gap-2">
                       <Star size={32} className="text-zinc-700" />
                       <span>Watchlist kosong.</span>
                     </div>
                   ) : (
+                    // TAMPILAN LOADING
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                       <span className="animate-pulse">
-                        Menghubungkan ke satelit data...
+                        Fetching satellite data...
                       </span>
                     </div>
                   )}

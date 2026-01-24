@@ -2,7 +2,8 @@ import { getCoinDetail, getCoinHistory } from "@/lib/api";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import CoinChart from "@/components/CoinChart";
-import BackButton from "@/components/BackButton"; // <--- IMPORT INI
+import BackButton from "@/components/BackButton";
+import ProfitCalculator from "@/components/ProfitCalculator"; // <--- 1. IMPORT COMPONENT BARU
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -41,10 +42,10 @@ export default async function CoinPage({ params }: PageProps) {
 
   return (
     <main className="min-h-screen pt-24 pb-12 px-4 md:px-8 font-sans max-w-7xl mx-auto">
-      {/* --- GANTI LINK LAMA DENGAN COMPONENT BACKBUTTON --- */}
+      {/* Tombol Back */}
       <BackButton />
 
-      {/* Header Info Koin (DYNAMIC THEME) */}
+      {/* Header Info Koin */}
       <div className="flex flex-col md:flex-row gap-6 items-start md:items-center mb-8 pb-8 border-b border-border">
         {/* Icon Container */}
         <div className="p-4 bg-card rounded-2xl border border-border shadow-sm">
@@ -82,14 +83,18 @@ export default async function CoinPage({ params }: PageProps) {
           </div>
           {/* Persentase */}
           <div
-            className={`text-lg font-bold mt-1 ${coin.market_data.price_change_percentage_24h >= 0 ? "text-emerald-500" : "text-rose-500"}`}
+            className={`text-lg font-bold mt-1 ${
+              coin.market_data.price_change_percentage_24h >= 0
+                ? "text-emerald-500"
+                : "text-rose-500"
+            }`}
           >
             {coin.market_data.price_change_percentage_24h.toFixed(2)}% (24h)
           </div>
         </div>
       </div>
 
-      {/* --- CHART AREA (DYNAMIC BACKGROUND) --- */}
+      {/* --- CHART AREA --- */}
       <div className="mb-8 w-full h-[400px] p-4 rounded-xl border border-border bg-card shadow-sm">
         {history ? (
           <CoinChart history={history} />
@@ -100,9 +105,8 @@ export default async function CoinPage({ params }: PageProps) {
         )}
       </div>
 
-      {/* Grid Statistik (DYNAMIC CARDS) */}
+      {/* Grid Statistik */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {/* Card 1 */}
         <div className="p-6 rounded-xl border border-border bg-card hover:border-primary/50 transition-colors shadow-sm">
           <div className="text-muted-foreground text-xs uppercase font-mono mb-2 tracking-widest">
             Market Cap
@@ -112,7 +116,6 @@ export default async function CoinPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Card 2 */}
         <div className="p-6 rounded-xl border border-border bg-card hover:border-primary/50 transition-colors shadow-sm">
           <div className="text-muted-foreground text-xs uppercase font-mono mb-2 tracking-widest">
             Total Volume (24h)
@@ -122,7 +125,6 @@ export default async function CoinPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Card 3 */}
         <div className="p-6 rounded-xl border border-border bg-card hover:border-primary/50 transition-colors shadow-sm">
           <div className="text-muted-foreground text-xs uppercase font-mono mb-2 tracking-widest">
             Circulating Supply
@@ -136,20 +138,31 @@ export default async function CoinPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Deskripsi (DYNAMIC PROSE) */}
-      <div className="p-6 md:p-8 rounded-xl border border-border bg-card shadow-sm">
-        <h3 className="text-foreground font-mono text-xl mb-6 flex items-center gap-3">
-          <span className="w-1 h-6 bg-primary rounded-full shadow-[0_0_10px_var(--primary)]"></span>
-          /// ASSET PROTOCOL
-        </h3>
-        <div
-          className="prose prose-zinc dark:prose-invert max-w-none leading-relaxed font-sans text-sm md:text-base"
-          dangerouslySetInnerHTML={{
-            __html:
-              coin.description.en ||
-              "No description data available in database.",
-          }}
-        />
+      {/* --- 2. GRID LAYOUT BARU: DESKRIPSI + KALKULATOR --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+        {/* Kolom Kiri: Deskripsi (Lebar 2/3) */}
+        <div className="lg:col-span-2 p-6 md:p-8 rounded-xl border border-border bg-card shadow-sm h-full">
+          <h3 className="text-foreground font-mono text-xl mb-6 flex items-center gap-3">
+            <span className="w-1 h-6 bg-primary rounded-full shadow-[0_0_10px_var(--primary)]"></span>
+            /// ASSET PROTOCOL
+          </h3>
+          <div
+            className="prose prose-zinc dark:prose-invert max-w-none leading-relaxed font-sans text-sm md:text-base"
+            dangerouslySetInnerHTML={{
+              __html:
+                coin.description.en ||
+                "No description data available in database.",
+            }}
+          />
+        </div>
+
+        {/* Kolom Kanan: Kalkulator Profit (Lebar 1/3) */}
+        <div className="lg:col-span-1 h-full">
+          <ProfitCalculator
+            currentPrice={coin.market_data.current_price.usd}
+            symbol={coin.symbol}
+          />
+        </div>
       </div>
     </main>
   );
