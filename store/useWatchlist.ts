@@ -1,21 +1,20 @@
-// src/store/useWatchlist.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 interface WatchlistState {
-  savedIds: string[]; // Daftar ID koin yang disimpan
-  toggleCoin: (id: string) => void; // Fungsi untuk Add/Remove
-  hasCoin: (id: string) => boolean; // Cek apakah koin ada di daftar
+  savedIds: string[];
+  toggleCoin: (id: string) => void;
+  hasCoin: (id: string) => boolean;
+  setSavedIds: (ids: string[]) => void; // <--- FUNGSI BARU
 }
 
 export const useWatchlist = create<WatchlistState>()(
   persist(
     (set, get) => ({
-      savedIds: [], // Awalnya kosong
+      savedIds: [],
 
       toggleCoin: (id) => {
         const { savedIds } = get();
-        // Jika sudah ada, hapus. Jika belum, tambahkan.
         if (savedIds.includes(id)) {
           set({ savedIds: savedIds.filter((savedId) => savedId !== id) });
         } else {
@@ -24,9 +23,12 @@ export const useWatchlist = create<WatchlistState>()(
       },
 
       hasCoin: (id) => get().savedIds.includes(id),
+
+      // Fungsi untuk menimpa data lokal dengan data dari Database
+      setSavedIds: (ids) => set({ savedIds: ids }),
     }),
     {
-      name: "algoterminal-watchlist", // Nama key di LocalStorage browser
+      name: "algoterminal-watchlist",
     },
   ),
 );

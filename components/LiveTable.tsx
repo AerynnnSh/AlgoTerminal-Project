@@ -12,9 +12,13 @@ import {
   ChevronRight,
   AlertTriangle,
   RefreshCcw,
-  Search, // <--- 1. IMPORT ICON SEARCH
+  Search,
 } from "lucide-react";
 import { useWatchlist } from "@/store/useWatchlist";
+
+// --- IMPORT SUPABASE ---
+import { createClient } from "@/lib/supabase";
+import { User } from "@supabase/supabase-js";
 
 interface LiveTableProps {
   initialData: CoinData[];
@@ -33,23 +37,55 @@ export default function LiveTable({ initialData }: LiveTableProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // State Sorting, Filtering & SEARCH
+  // State Sorting, Filtering & Search
   const [sortConfig, setSortConfig] = useState<{
     key: SortKey;
     direction: "asc" | "desc";
   }>({ key: "market_cap_rank", direction: "asc" });
 
   const [showFavOnly, setShowFavOnly] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(""); // <--- 2. STATE SEARCH BARU
+  const [searchQuery, setSearchQuery] = useState("");
 
   // State Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
 
   const router = useRouter();
-  const { toggleCoin, savedIds } = useWatchlist();
 
-  // 1. Fetch Data
+  // Ambil Store Zustand
+  const { toggleCoin, savedIds, setSavedIds } = useWatchlist();
+
+  // State User (Login)
+  const [user, setUser] = useState<User | null>(null);
+  const supabase = createClient();
+
+  // 1. Cek User & Sync Database saat pertama kali load
+  useEffect(() => {
+    const syncWatchlist = async () => {
+      // Cek siapa yang login
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+
+      if (user) {
+        // Jika login, ambil data dari tabel 'watchlist'
+        const { data, error } = await supabase
+          .from("watchlist")
+          .select("coin_id");
+
+        if (!error && data) {
+          // Ambil cuma ID-nya aja, lalu update Store Lokal
+          const dbIds = data.map((item) => item.coin_id);
+          setSavedIds(dbIds);
+        }
+      }
+    };
+
+    syncWatchlist();
+  }, []); // Run sekali pas mount
+
+  // 2. Fetch Market Data (CoinGecko)
   useEffect(() => {
     const fetchData = async () => {
       setIsUpdating(true);
@@ -61,10 +97,7 @@ export default function LiveTable({ initialData }: LiveTableProps) {
         );
 
         if (res.status === 429) {
-          console.warn("API Rate Limit Reached");
-          if (coins.length === 0) {
-            setErrorMsg("API RATE LIMIT REACHED. PLEASE WAIT 1 MINUTE.");
-          }
+          if (coins.length === 0) setErrorMsg("API RATE LIMIT REACHED.");
           return;
         }
 
@@ -73,10 +106,7 @@ export default function LiveTable({ initialData }: LiveTableProps) {
         const data = await res.json();
         setCoins(data);
       } catch (error) {
-        console.error("Gagal update data:", error);
-        if (coins.length === 0) {
-          setErrorMsg("FAILED TO FETCH MARKET DATA.");
-        }
+        if (coins.length === 0) setErrorMsg("FAILED TO FETCH MARKET DATA.");
       } finally {
         setTimeout(() => setIsUpdating(false), 500);
       }
@@ -87,9 +117,35 @@ export default function LiveTable({ initialData }: LiveTableProps) {
     return () => clearInterval(interval);
   }, []);
 
-  const handleStarClick = (e: React.MouseEvent, id: string) => {
+  // 3. LOGIC KLIK BINTANG (HYBRID)
+  const handleStarClick = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
+
+    // A. Cek apakah ini aksi "Add" atau "Remove" sebelum di-toggle
+    const isAdding = !savedIds.includes(id);
+
+    // B. Update UI duluan (Optimistic Update) biar user gak nunggu loading
     toggleCoin(id);
+
+    // C. Kalau user LOGIN, update juga ke Database Supabase
+    if (user) {
+      if (isAdding) {
+        // Simpan ke DB
+        const { error } = await supabase
+          .from("watchlist")
+          .insert({ user_id: user.id, coin_id: id });
+
+        if (error) console.error("Gagal simpan ke DB:", error);
+      } else {
+        // Hapus dari DB
+        const { error } = await supabase
+          .from("watchlist")
+          .delete()
+          .match({ user_id: user.id, coin_id: id });
+
+        if (error) console.error("Gagal hapus dari DB:", error);
+      }
+    }
   };
 
   const handleSort = (key: SortKey) => {
@@ -100,18 +156,14 @@ export default function LiveTable({ initialData }: LiveTableProps) {
     setSortConfig({ key, direction });
   };
 
-  // 2. LOGIC PENGOLAHAN DATA (SEARCH + FILTER + SORT)
+  // Logic Pengolahan Data
   const processedCoins = [...coins]
     .filter((coin) => {
-      // Logic 1: Filter Favorites
       const matchesFav = showFavOnly ? savedIds.includes(coin.id) : true;
-
-      // Logic 2: Filter Search (Name OR Symbol)
       const query = searchQuery.toLowerCase();
       const matchesSearch =
         coin.name.toLowerCase().includes(query) ||
         coin.symbol.toLowerCase().includes(query);
-
       return matchesFav && matchesSearch;
     })
     .sort((a, b) => {
@@ -119,7 +171,6 @@ export default function LiveTable({ initialData }: LiveTableProps) {
       const valA = a[sortConfig.key] ?? 0;
       // @ts-ignore
       const valB = b[sortConfig.key] ?? 0;
-
       if (sortConfig.key === "market_cap_rank") {
         return sortConfig.direction === "asc" ? valA - valB : valB - valA;
       }
@@ -127,22 +178,19 @@ export default function LiveTable({ initialData }: LiveTableProps) {
     });
 
   const totalPages = Math.ceil(processedCoins.length / ITEMS_PER_PAGE);
-
   const paginatedCoins = processedCoins.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE,
   );
 
-  // Reset page ke 1 jika user melakukan filter/search/sort
   useEffect(() => {
     setCurrentPage(1);
-  }, [showFavOnly, sortConfig, searchQuery]); // <--- Tambahkan searchQuery
+  }, [showFavOnly, sortConfig, searchQuery]);
 
   return (
     <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm transition-colors duration-300 flex flex-col">
-      {/* --- HEADER CONTROL --- */}
+      {/* HEADER CONTROL */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between px-6 py-4 border-b border-border gap-4 bg-muted/20">
-        {/* KIRI: Indikator & Title */}
         <div className="flex items-center gap-2">
           <div
             className={`w-2 h-2 rounded-full ${
@@ -153,15 +201,12 @@ export default function LiveTable({ initialData }: LiveTableProps) {
                   : "bg-zinc-500"
             }`}
           ></div>
-
           <span className="text-xs font-mono font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
             {errorMsg ? "SYSTEM ALERT" : `LIVE DATA (${processedCoins.length})`}
           </span>
         </div>
 
-        {/* KANAN: Search & Filter */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full md:w-auto">
-          {/* 3. INPUT SEARCH BARU */}
           <div className="relative group w-full md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors h-4 w-4" />
             <input
@@ -173,7 +218,6 @@ export default function LiveTable({ initialData }: LiveTableProps) {
             />
           </div>
 
-          {/* Tombol Filter Favorites */}
           <button
             onClick={() => setShowFavOnly(!showFavOnly)}
             className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-mono border transition-all whitespace-nowrap ${
@@ -335,14 +379,13 @@ export default function LiveTable({ initialData }: LiveTableProps) {
                 );
               })
             ) : (
-              // --- 4. HANDLING EMPTY STATE (LOADING / ERROR / EMPTY SEARCH) ---
+              // HANDLING EMPTY STATE
               <tr>
                 <td
                   colSpan={7}
                   className="text-center py-32 text-muted-foreground font-mono"
                 >
                   {errorMsg ? (
-                    // TAMPILAN ERROR
                     <div className="flex flex-col items-center justify-center gap-3 animate-in fade-in zoom-in duration-300">
                       <div className="p-3 bg-rose-500/10 rounded-full border border-rose-500/20">
                         <AlertTriangle size={32} className="text-rose-500" />
@@ -362,7 +405,6 @@ export default function LiveTable({ initialData }: LiveTableProps) {
                       </button>
                     </div>
                   ) : searchQuery ? (
-                    // TAMPILAN SEARCH NOT FOUND (BARU)
                     <div className="flex flex-col items-center gap-3">
                       <div className="p-4 bg-muted/50 rounded-full">
                         <Search size={24} className="opacity-40" />
@@ -375,13 +417,11 @@ export default function LiveTable({ initialData }: LiveTableProps) {
                       </div>
                     </div>
                   ) : showFavOnly ? (
-                    // TAMPILAN WATCHLIST KOSONG
                     <div className="flex flex-col items-center gap-2">
                       <Star size={32} className="text-zinc-700" />
                       <span>Watchlist kosong.</span>
                     </div>
                   ) : (
-                    // TAMPILAN LOADING
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                       <span className="animate-pulse">
@@ -396,7 +436,7 @@ export default function LiveTable({ initialData }: LiveTableProps) {
         </table>
       </div>
 
-      {/* --- FOOTER PAGINATION --- */}
+      {/* FOOTER PAGINATION */}
       {processedCoins.length > ITEMS_PER_PAGE && (
         <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/20">
           <div className="text-xs text-muted-foreground font-mono">
