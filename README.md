@@ -2,7 +2,7 @@
 
 > A real-time crypto market analytics dashboard built with Next.js 14, TypeScript, Supabase, and Recharts.
 
-![Project Banner](img/banner.png)
+![Project Banner](img/banner1.png)
 
 ## 🔗 Live Demo
 🚀 **[View Live Demo](https://algoterminal-eli.vercel.app)**
